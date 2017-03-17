@@ -1,0 +1,48 @@
+---
+- name: install postfix packages
+  apt: pkg={{ item }} state=present
+  with_items:
+    - mailutils
+    - postfix
+    - libsasl2-modules
+
+- name: create postfix configuration
+  template: >
+    src=main.cf.j2 dest=/etc/postfix/main.cf
+    owner=root group=root mode=0644
+  notify:
+    - restart postfix
+
+- name: create postfix aliases configuration
+  template: >
+    src=aliases.j2 dest=/etc/aliases
+    owner=root group=root mode=0644
+  notify:
+    - new aliases
+    - restart postfix
+
+- name: create postfix smtp_generic_maps configuration
+  template: >
+    src=generic.j2 dest=/etc/postfix/generic
+    mode=0600 owner=root group=root
+  notify:
+    - postmap smtp_generic_maps
+    - restart postfix
+
+- name: create postfix sasl_password configuration
+  template: >
+    src=sasl_passwd.j2 dest=/etc/postfix/sasl_passwd
+    mode=0600 owner=root group=root
+  notify:
+    - postmap sasl_passwd
+    - restart postfix
+
+- name: create monit postfix configuration
+  template: >
+    src=postfix.monit.j2 dest=/etc/monit/conf.d/postfix
+    owner=root group=root mode=0644
+  notify:
+    - reload monit
+
+- name: ensure postfix is running
+  service: name=postfix state=running enabled=yes
